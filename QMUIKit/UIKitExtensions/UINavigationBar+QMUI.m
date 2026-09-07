@@ -365,20 +365,28 @@ NSString *const kShouldFixTitleViewBugKey = @"kShouldFixTitleViewBugKey";
 }
 
 - (UIView *)qmui_contentView {
-    if (QMUIHelper.isUsedLiquidGlass) {
-        for (UIView *subview in self.subviews) {
-            static NSString *clsString = nil;
-            if (!clsString) {
-                clsString = [NSString stringWithFormat:@"%@.%@%@", @"UIKit", @"NavigationBar", @"ContentView"];
-            }
-            if ([subview isKindOfClass:NSClassFromString(clsString)]) {
-                return subview;
-            }
-        }
-        return nil;
+    // 优先尝试原始 KVC 方式（iOS 26 以下）
+    if (@available(iOS 26.0, *)) {
+        // iOS 26+ 不使用 KVC，走下面的兜底逻辑
     } else {
-        return [self valueForKeyPath:@"visualProvider.contentView"];
+        @try {
+            UIView *contentView = [self valueForKeyPath:@"visualProvider.contentView"];
+            if (contentView) {
+                return contentView;
+            }
+        } @catch (NSException *exception) {
+            // KVC 失败，继续走兜底逻辑
+            NSLog(@"QMUI: Failed to get contentView via KVC: %@", exception);
+        }
     }
+    
+    // iOS 26+ 或 KVC 失败时的兜底方案
+    UIView *contentView = [self qmui_findContentView];
+    if (contentView) {
+        return contentView;
+    }
+    
+    return nil;
 }
 
 - (void)qmuinb_fixTitleViewLayoutInIOS16 {
@@ -391,6 +399,67 @@ NSString *const kShouldFixTitleViewBugKey = @"kShouldFixTitleViewBugKey";
         followingFrame = CGRectSetY(followingFrame, CGRectGetMinYVerticallyCenterInParentRect(view.superview.bounds, followingFrame));
         return followingFrame;
     };
+}
+
+#pragma mark - Private Helper Methods
+
+- (UIView *)qmui_findContentView {
+    UIView *contentView = nil;
+    
+    // 1. 尝试 _UINavigationBarContentView（iOS 26 以下的老类名）
+    Class contentViewClass = NSClassFromString(@"_UINavigationBarContentView");
+    if (contentViewClass) {
+        contentView = [self qmui_subviewWithClass:contentViewClass];
+        if (contentView) return contentView;
+    }
+    
+    // 2. 尝试 UIKit.NavigationBarContentView（Swift 风格的类名）
+    contentViewClass = NSClassFromString(@"UIKit.NavigationBarContentView");
+    if (contentViewClass) {
+        contentView = [self qmui_subviewWithClass:contentViewClass];
+        if (contentView) return contentView;
+    }
+    
+    // 3. 模糊匹配类名中包含 "ContentView" 的视图
+    contentView = [self qmui_subviewWithClassNamePart:@"ContentView"];
+    if (contentView) return contentView;
+    
+    return nil;
+}
+
+- (UIView *)qmui_subviewWithClass:(Class)aClass {
+    if (!aClass) return nil;
+    
+    for (UIView *subview in self.subviews) {
+        if ([subview isKindOfClass:aClass]) {
+            return subview;
+        }
+        // 某些系统版本中 contentView 不是直接子视图，需要向下查找一层
+        for (UIView *subSubview in subview.subviews) {
+            if ([subSubview isKindOfClass:aClass]) {
+                return subSubview;
+            }
+        }
+    }
+    return nil;
+}
+
+- (UIView *)qmui_subviewWithClassNamePart:(NSString *)classNamePart {
+    if (!classNamePart.length) return nil;
+    
+    for (UIView *subview in self.subviews) {
+        NSString *className = NSStringFromClass([subview class]);
+        if ([className containsString:classNamePart]) {
+            return subview;
+        }
+        for (UIView *subSubview in subview.subviews) {
+            NSString *subClassName = NSStringFromClass([subSubview class]);
+            if ([subClassName containsString:classNamePart]) {
+                return subSubview;
+            }
+        }
+    }
+    return nil;
 }
 
 @end
