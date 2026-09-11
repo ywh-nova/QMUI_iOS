@@ -190,14 +190,16 @@ static NSMutableArray <QMUIToastView *> *kToastViews = nil;
 #pragma mark - 横竖屏
 
 - (void)registerNotifications {
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(statusBarOrientationDidChange:) name:UIApplicationDidChangeStatusBarOrientationNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(interfaceOrientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(interfaceOrientationDidChange:) name:UISceneDidActivateNotification object:nil];
 }
 
 - (void)removeNotifications {
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidChangeStatusBarOrientationNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UISceneDidActivateNotification object:nil];
 }
 
-- (void)statusBarOrientationDidChange:(NSNotification *)notification {
+- (void)interfaceOrientationDidChange:(NSNotification *)notification {
     if (!self.parentView) {
         return;
     }

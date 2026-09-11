@@ -110,7 +110,7 @@ QMUISynthesizeNSIntegerProperty(lastOrientationChangedByHelper, setLastOrientati
 }
 
 + (CGAffineTransform)transformForCurrentInterfaceOrientation {
-    return [QMUIHelper transformWithInterfaceOrientation:UIApplication.sharedApplication.statusBarOrientation];
+    return [QMUIHelper transformWithInterfaceOrientation:QMUIHelper.interfaceOrientation];
 }
 
 + (CGAffineTransform)transformWithInterfaceOrientation:(UIInterfaceOrientation)orientation {
@@ -152,13 +152,13 @@ QMUISynthesizeNSIntegerProperty(lastOrientationChangedByHelper, setLastOrientati
                 }
                 
                 
-                UIInterfaceOrientation statusBarOrientation = UIApplication.sharedApplication.statusBarOrientation;
+                UIInterfaceOrientation interfaceOrientation = QMUIHelper.interfaceOrientation;
                 UIDeviceOrientation lastOrientationChangedByHelper = [QMUIHelper sharedInstance].lastOrientationChangedByHelper;
                 BOOL shouldConsiderLastChanged = lastOrientationChangedByHelper != UIDeviceOrientationUnknown;
                 UIDeviceOrientation deviceOrientation = [UIDevice currentDevice].orientation;
                 
                 // 虽然这两者的 unknow 值是相同的，但在启动 App 时可能只有其中一个是 unknown
-                if (statusBarOrientation == UIInterfaceOrientationUnknown || deviceOrientation == UIDeviceOrientationUnknown) return;
+                if (interfaceOrientation == UIInterfaceOrientationUnknown || deviceOrientation == UIDeviceOrientationUnknown) return;
                 
                 // 之前没用私有接口修改过，那就按最标准的方式去旋转
                 if (!shouldConsiderLastChanged) {

@@ -127,7 +127,7 @@
 
 /// 是否横竖屏
 /// 用户界面横屏了才会返回YES
-#define IS_LANDSCAPE UIInterfaceOrientationIsLandscape(UIApplication.sharedApplication.statusBarOrientation)
+#define IS_LANDSCAPE UIInterfaceOrientationIsLandscape(QMUIHelper.interfaceOrientation)
 /// 无论支不支持横屏，只要设备横屏了，就会返回YES
 #define IS_DEVICE_LANDSCAPE UIDeviceOrientationIsLandscape([[UIDevice currentDevice] orientation])
 
@@ -199,19 +199,19 @@
 #define ScreenNativeScale ([[UIScreen mainScreen] nativeScale])
 
 /// toolBar相关frame
-#define ToolBarHeight (IS_IPAD ? (IS_NOTCHED_SCREEN ? 70 : 50) : (IS_LANDSCAPE ? PreferredValueForVisualDevice(44, 32) : 44) + SafeAreaInsetsConstantForDeviceWithNotch.bottom)
+#define ToolBarHeight QMUIHelper.toolBarHeight
 
 /// tabBar相关frame
-#define TabBarHeight (IS_IPAD ? (IS_NOTCHED_SCREEN ? 65 : 50) : (IS_LANDSCAPE ? PreferredValueForVisualDevice(49, 32) : 49) + SafeAreaInsetsConstantForDeviceWithNotch.bottom)
+#define TabBarHeight QMUIHelper.tabBarHeight
 
 /// 状态栏高度(来电等情况下，状态栏高度会发生变化，所以应该实时计算，iOS 13 起，来电等情况下状态栏高度不会改变)
-#define StatusBarHeight (UIApplication.sharedApplication.statusBarHidden ? 0 : UIApplication.sharedApplication.statusBarFrame.size.height)
+#define StatusBarHeight QMUIHelper.statusBarHeight
 
 /// 状态栏高度(如果状态栏不可见，也会返回一个普通状态下可见的高度)
 #define StatusBarHeightConstant [QMUIHelper statusBarHeightConstant]
 
 /// navigationBar 的静态高度
-#define NavigationBarHeight (IS_IPAD ? 50 : (IS_LANDSCAPE ? PreferredValueForVisualDevice(44, 32) : 44))
+#define NavigationBarHeight QMUIHelper.navigationBarHeight
 
 /// 代表(导航栏+状态栏)，这里用于获取其高度
 /// @warn 如果是用于 viewController，请使用 UIViewController(QMUI) qmui_navigationBarMaxYInViewCoordinator 代替

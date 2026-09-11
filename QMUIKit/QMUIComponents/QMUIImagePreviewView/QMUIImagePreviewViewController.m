@@ -101,7 +101,7 @@ const CGFloat QMUIImagePreviewViewControllerCornerRadiusAutomaticDimension = -1;
     self.imagePreviewView.qmui_frameApplyTransform = self.view.bounds;
     
     UIViewController *backendViewController = [self visibleViewControllerWithViewController:self.presentingViewController];
-    self.canShowPresentingViewControllerWhenGesturing = [QMUIHelper interfaceOrientationMask:backendViewController.supportedInterfaceOrientations containsInterfaceOrientation:UIApplication.sharedApplication.statusBarOrientation];
+    self.canShowPresentingViewControllerWhenGesturing = [QMUIHelper interfaceOrientationMask:backendViewController.supportedInterfaceOrientations containsInterfaceOrientation:QMUIHelper.interfaceOrientation];
 }
 
 - (void)viewWillAppear:(BOOL)animated {

@@ -47,41 +47,76 @@ QMUISynthesizeBOOLProperty(qmui_didFinishLaunching, setQmui_didFinishLaunching)
 }
 
 - (NSArray<__kindof UIWindow *> *)qmui_windows {
-    __block NSArray *windows = nil;
-    [self.connectedScenes enumerateObjectsUsingBlock:^(UIScene *scene, BOOL *stop) {
-        if ([scene isKindOfClass:UIWindowScene.class] && [scene.session.role isEqualToString:UIWindowSceneSessionRoleApplication]) {
-            windows = [(UIWindowScene *)scene windows];
-            *stop = YES;
-        }
-    }];
-    if (!windows || windows.count == 0) {
-        windows = self.windows;
+    UIWindowScene *activeWindowScene = self.qmui_activeWindowScene;
+    if (activeWindowScene.windows.count > 0) {
+        return activeWindowScene.windows;
     }
-    return windows ? : @[];
+
+    NSMutableArray<UIWindow *> *windows = NSMutableArray.array;
+    for (UIScene *scene in self.connectedScenes) {
+        if ([scene isKindOfClass:UIWindowScene.class] && [scene.session.role isEqualToString:UIWindowSceneSessionRoleApplication]) {
+            [windows addObjectsFromArray:((UIWindowScene *)scene).windows];
+        }
+    }
+    return windows.copy;
+}
+
+- (nullable UIWindowScene *)qmui_activeWindowScene {
+    UIWindowScene *bestScene = nil;
+    NSInteger bestScore = NSIntegerMin;
+    for (UIScene *scene in self.connectedScenes) {
+        if (![scene isKindOfClass:UIWindowScene.class] || ![scene.session.role isEqualToString:UIWindowSceneSessionRoleApplication]) {
+            continue;
+        }
+
+        UIWindowScene *windowScene = (UIWindowScene *)scene;
+        NSInteger score = 0;
+        switch (windowScene.activationState) {
+            case UISceneActivationStateForegroundActive:
+                score = 300;
+                break;
+            case UISceneActivationStateForegroundInactive:
+                score = 200;
+                break;
+            case UISceneActivationStateBackground:
+                score = 100;
+                break;
+            case UISceneActivationStateUnattached:
+                break;
+        }
+        if (windowScene.keyWindow) {
+            score += 20;
+        } else if ([windowScene.windows indexOfObjectPassingTest:^BOOL(UIWindow *window, NSUInteger idx, BOOL *stop) {
+            return !window.isHidden && window.alpha > 0;
+        }] != NSNotFound) {
+            score += 10;
+        }
+        if (!bestScene || score > bestScore) {
+            bestScene = windowScene;
+            bestScore = score;
+        }
+    }
+    return bestScene;
 }
 
 - (nullable __kindof UIWindow *)qmui_keyWindow {
-    __block UIWindow *keyWindow = nil;
-    [self.connectedScenes enumerateObjectsUsingBlock:^(UIScene *scene, BOOL *stop) {
-        if ([scene isKindOfClass:UIWindowScene.class] && [scene.session.role isEqualToString:UIWindowSceneSessionRoleApplication]) {
-            UIWindowScene *windowScene = (UIWindowScene *)scene;
-            if (@available(iOS 15.0, *)) {
-                keyWindow = windowScene.keyWindow;
-            } else {
-                [windowScene.windows enumerateObjectsUsingBlock:^(UIWindow *window, NSUInteger idx, BOOL *substop) {
-                    if (window.isKeyWindow && !window.isHidden) {
-                        keyWindow = window;
-                        *substop = YES;
-                    }
-                }];
-            }
-            *stop = YES;
-        }
-    }];
+    UIWindowScene *windowScene = self.qmui_activeWindowScene;
+    UIWindow *keyWindow = windowScene.keyWindow;
     if (!keyWindow) {
-        BeginIgnoreDeprecatedWarning
-        keyWindow = self.keyWindow;
-        EndIgnoreDeprecatedWarning
+        for (UIWindow *window in windowScene.windows) {
+            if (window.isKeyWindow && !window.isHidden) {
+                keyWindow = window;
+                break;
+            }
+        }
+    }
+    if (!keyWindow) {
+        for (UIWindow *window in windowScene.windows) {
+            if (!window.isHidden && window.alpha > 0 && window.windowLevel == UIWindowLevelNormal) {
+                keyWindow = window;
+                break;
+            }
+        }
     }
     if (!keyWindow) {
         keyWindow = self.qmui_delegateWindow;
@@ -91,6 +126,13 @@ QMUISynthesizeBOOLProperty(qmui_didFinishLaunching, setQmui_didFinishLaunching)
 
 - (nullable __kindof UIWindow *)qmui_delegateWindow {
     __block UIWindow *delegateWindow = nil;
+    UIWindowScene *activeWindowScene = self.qmui_activeWindowScene;
+    if ([activeWindowScene.delegate respondsToSelector:@selector(window)]) {
+        delegateWindow = [activeWindowScene.delegate performSelector:@selector(window)];
+    }
+    if (delegateWindow) {
+        return delegateWindow;
+    }
     [self.connectedScenes enumerateObjectsUsingBlock:^(UIScene *scene, BOOL *stop) {
         if ([scene isKindOfClass:UIWindowScene.class] && [scene.session.role isEqualToString:UIWindowSceneSessionRoleApplication]) {
             if ([scene.delegate respondsToSelector:@selector(window)]) {
@@ -106,4 +148,3 @@ QMUISynthesizeBOOLProperty(qmui_didFinishLaunching, setQmui_didFinishLaunching)
 }
 
 @end
-

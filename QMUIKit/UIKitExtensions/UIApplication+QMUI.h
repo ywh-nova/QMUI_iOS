@@ -21,6 +21,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// 判断当前的 App 是否已经完全启动
 @property(nonatomic, assign, readonly) BOOL qmui_didFinishLaunching;
 
+/// 当前最适合承载 UI 的应用场景。优先返回前台、包含 key window 的场景。
+@property (nullable, nonatomic, readonly) UIWindowScene *qmui_activeWindowScene;
+
 @property (nonatomic, readonly) NSArray<__kindof UIWindow *> *qmui_windows;
 
 @property (nullable, nonatomic, readonly) __kindof UIWindow *qmui_keyWindow;

@@ -237,6 +237,22 @@ NS_ASSUME_NONNULL_BEGIN
 /// @NEW_DEVICE_CHECKER
 @property(class, nonatomic, readonly) BOOL isDynamicIslandDevice;
 
+/// 当前最适合承载 UI 的前台应用场景和窗口。App 尚未连接场景时可能为 nil。
+@property(class, nullable, nonatomic, readonly) UIWindowScene *activeWindowScene;
+@property(class, nullable, nonatomic, readonly) UIWindow *activeWindow;
+
+/// 当前应用场景的界面方向；场景尚未建立时使用设备方向或窗口尺寸作保守推断。
+@property(class, nonatomic, readonly) UIInterfaceOrientation interfaceOrientation;
+
+/// 当前活动窗口的安全区。窗口尚未建立时返回 UIEdgeInsetsZero。
+@property(class, nonatomic, readonly) UIEdgeInsets safeAreaInsets;
+
+/// Scene-aware 的栏高度。旧宏会转发到这些属性以保持源码兼容。
+@property(class, nonatomic, readonly) CGFloat statusBarHeight;
+@property(class, nonatomic, readonly) CGFloat navigationBarHeight;
+@property(class, nonatomic, readonly) CGFloat tabBarHeight;
+@property(class, nonatomic, readonly) CGFloat toolBarHeight;
+
 /**
  在 iPad 分屏模式下可获得实际运行区域的窗口大小，如需适配 iPad 分屏，建议用这个方法来代替 [UIScreen mainScreen].bounds.size
  @return 应用运行的窗口大小

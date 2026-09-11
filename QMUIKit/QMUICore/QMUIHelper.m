@@ -771,6 +771,10 @@ static CGFloat preferredLayoutWidth = -1;
 }
 
 + (UIEdgeInsets)safeAreaInsetsForDeviceWithNotch {
+    UIEdgeInsets currentSafeAreaInsets = self.safeAreaInsets;
+    if (currentSafeAreaInsets.bottom > 0) {
+        return currentSafeAreaInsets;
+    }
     if (![self isNotchedScreen]) {
         return UIEdgeInsetsZero;
     }
@@ -983,7 +987,7 @@ static CGFloat preferredLayoutWidth = -1;
     }
     
     NSNumber *orientationKey = nil;
-    UIInterfaceOrientation orientation = UIApplication.sharedApplication.statusBarOrientation;
+    UIInterfaceOrientation orientation = QMUIHelper.interfaceOrientation;
     switch (orientation) {
         case UIInterfaceOrientationLandscapeLeft:
         case UIInterfaceOrientationLandscapeRight:
@@ -1054,29 +1058,108 @@ static NSInteger isHighPerformanceDevice = -1;
     preferredLayoutWidth = -1;
 }
 
-+ (CGSize)applicationSize {
-    /// applicationFrame 在 iPad 下返回的 size 要比 window 实际的 size 小，这个差值体现在 origin 上，所以用 origin + size 修正得到正确的大小。
-    BeginIgnoreDeprecatedWarning
-    CGRect applicationFrame = [UIScreen mainScreen].applicationFrame;
-    EndIgnoreDeprecatedWarning
-    CGSize applicationSize = CGSizeMake(applicationFrame.size.width + applicationFrame.origin.x, applicationFrame.size.height + applicationFrame.origin.y);
-    if (CGSizeEqualToSize(applicationSize, CGSizeZero)) {
-        // 实测 MacCatalystApp 通过 [UIScreen mainScreen].applicationFrame 拿不到大小，这里做一下保护
-        UIWindow *window = UIApplication.sharedApplication.qmui_delegateWindow;
-        if (window) {
-            applicationSize = window.bounds.size;
-        } else {
-            applicationSize = UIWindow.new.bounds.size;
-        }
++ (nullable UIWindowScene *)activeWindowScene {
+    return UIApplication.sharedApplication.qmui_activeWindowScene;
+}
+
++ (nullable UIWindow *)activeWindow {
+    return UIApplication.sharedApplication.qmui_keyWindow ?: UIApplication.sharedApplication.qmui_delegateWindow;
+}
+
++ (UIInterfaceOrientation)interfaceOrientation {
+    UIWindowScene *windowScene = self.activeWindowScene;
+    UIInterfaceOrientation orientation = UIInterfaceOrientationUnknown;
+#ifdef IOS16_SDK_ALLOWED
+    if (@available(iOS 16.0, *)) {
+        orientation = windowScene.effectiveGeometry.interfaceOrientation;
+    } else
+#endif
+    {
+        orientation = windowScene.interfaceOrientation;
     }
-    return applicationSize;
+    if (orientation != UIInterfaceOrientationUnknown) {
+        return orientation;
+    }
+
+    switch (UIDevice.currentDevice.orientation) {
+        case UIDeviceOrientationPortrait:
+            return UIInterfaceOrientationPortrait;
+        case UIDeviceOrientationPortraitUpsideDown:
+            return UIInterfaceOrientationPortraitUpsideDown;
+        case UIDeviceOrientationLandscapeLeft:
+            return UIInterfaceOrientationLandscapeRight;
+        case UIDeviceOrientationLandscapeRight:
+            return UIInterfaceOrientationLandscapeLeft;
+        default:
+            break;
+    }
+
+    CGSize size = self.activeWindow.bounds.size;
+    if (size.width > 0 && size.height > 0 && size.width > size.height) {
+        return UIInterfaceOrientationLandscapeLeft;
+    }
+    return UIInterfaceOrientationPortrait;
+}
+
++ (UIEdgeInsets)safeAreaInsets {
+    return self.activeWindow.safeAreaInsets;
+}
+
++ (CGFloat)statusBarHeight {
+    UIStatusBarManager *statusBarManager = self.activeWindowScene.statusBarManager;
+    if (!statusBarManager || statusBarManager.statusBarHidden) {
+        return 0;
+    }
+    return CGRectGetHeight(statusBarManager.statusBarFrame);
+}
+
++ (CGFloat)navigationBarHeight {
+    if (self.isIPad) {
+        return 50;
+    }
+    return UIInterfaceOrientationIsLandscape(self.interfaceOrientation) ? PreferredValueForVisualDevice(44, 32) : 44;
+}
+
++ (CGFloat)tabBarHeight {
+    if (self.isIPad) {
+        return self.safeAreaInsets.bottom > 0 ? 65 : 50;
+    }
+    CGFloat contentHeight = UIInterfaceOrientationIsLandscape(self.interfaceOrientation) ? PreferredValueForVisualDevice(49, 32) : 49;
+    return contentHeight + self.safeAreaInsets.bottom;
+}
+
++ (CGFloat)toolBarHeight {
+    if (self.isIPad) {
+        return self.safeAreaInsets.bottom > 0 ? 70 : 50;
+    }
+    CGFloat contentHeight = UIInterfaceOrientationIsLandscape(self.interfaceOrientation) ? PreferredValueForVisualDevice(44, 32) : 44;
+    return contentHeight + self.safeAreaInsets.bottom;
+}
+
++ (CGSize)applicationSize {
+    CGSize applicationSize = self.activeWindow.bounds.size;
+    if (!CGSizeEqualToSize(applicationSize, CGSizeZero)) {
+        return applicationSize;
+    }
+
+    UIWindowScene *windowScene = self.activeWindowScene;
+#ifdef IOS26_SDK_ALLOWED
+    if (@available(iOS 26.0, *)) {
+        applicationSize = windowScene.effectiveGeometry.coordinateSpace.bounds.size;
+    } else
+#endif
+    {
+        applicationSize = windowScene.coordinateSpace.bounds.size;
+    }
+    return CGSizeEqualToSize(applicationSize, CGSizeZero) ? UIScreen.mainScreen.bounds.size : applicationSize;
 }
 
 + (CGFloat)statusBarHeightConstant {
     NSString *deviceModel = [QMUIHelper deviceModel];
-    
-    if (!UIApplication.sharedApplication.statusBarHidden) {
-        return UIApplication.sharedApplication.statusBarFrame.size.height;
+
+    CGFloat sceneStatusBarHeight = CGRectGetHeight(self.activeWindowScene.statusBarManager.statusBarFrame);
+    if (sceneStatusBarHeight > 0) {
+        return sceneStatusBarHeight;
     }
     
     if (IS_IPAD) {
